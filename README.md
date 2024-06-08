@@ -4,7 +4,7 @@
 
 Data fetched from HeadHunter and SuperJob platforms.
 
-Utility calculates avarage salary for available vacancies of paticular language, published in last 30 days and print a summary table to console.
+Utility calculates average salary for available vacancies of paticular language, published in last 30 days and print a summary table to console.
 
 ### Installation
 
