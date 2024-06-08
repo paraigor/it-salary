@@ -1,3 +1,4 @@
+import argparse
 import os
 from itertools import count
 
@@ -127,6 +128,16 @@ def print_table(title, it_lang_stat):
 def main():
     dotenv.load_dotenv()
     sjob_key = os.environ["SJOB_KEY"]
+    parser = argparse.ArgumentParser(
+                prog = "dev_job_stat",
+                description = """Utility for fetching salary statistics for
+                  JavaScript, Java, Python, Ruby, PHP, C++, C#, Go, Scala,
+                  Swift, TypeScript programming languages from HeadHunter
+                  and SuperJob platforms. Uses vacancies published in last
+                  30 days."""
+        )
+    parser.parse_args()
+
     popular_it_langs = [
         "JavaScript",
         "Java",
