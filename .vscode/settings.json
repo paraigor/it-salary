@@ -1,0 +1,7 @@
+{
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "editor.fontSize": 15,
+    "editor.fontLigatures": true,
+    "editor.fontFamily": "Hack, Consolas, 'Courier New', monospace",
+}
