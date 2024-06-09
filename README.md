@@ -27,6 +27,9 @@ SuperJob API version 2.0 is used for requests.
 Easy to use utility. No arguments needed:
 ```
 $ python dev_job_stat.py
+```
+Output example:
+```
 +HeadHunter Moscow------+------------------+---------------------+------------------+
 | Язык программирования | Вакансий найдено | Вакансий обработано | Средняя зарплата |
 +-----------------------+------------------+---------------------+------------------+

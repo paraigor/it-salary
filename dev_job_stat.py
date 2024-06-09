@@ -1,4 +1,3 @@
-import argparse
 import os
 from itertools import count
 
@@ -7,7 +6,7 @@ import requests
 from terminaltables import AsciiTable
 
 
-def get_hh_vacancy_data(url, payload, header):
+def get_hh_vacancies(url, payload, header):
     salaries = []
     vacancies_found = 0
     for page in count():
@@ -24,7 +23,7 @@ def get_hh_vacancy_data(url, payload, header):
     return salaries, vacancies_found
 
 
-def get_sj_vacancy_data(url, payload, header):
+def get_sj_vacancies(url, payload, header):
     salaries = []
     vacancies_found = 0
     for page in count():
@@ -60,42 +59,43 @@ def predict_rub_salary_hh(vacancy):
 
 
 def predict_rub_salary_sj(vacancy):
-    if (
-        not vacancy["payment_from"]
-        and not vacancy["payment_to"]
-        or vacancy["currency"] != "rub"
-    ):
+    payment_from = vacancy["payment_from"]
+    payment_to = vacancy["payment_to"]
+    currency = vacancy["currency"]
+    if not payment_from and not payment_to or currency != "rub":
         return None
-    return predict_salary(vacancy["payment_from"], vacancy["payment_to"])
+    return predict_salary(payment_from, payment_to)
 
 
-def get_salaries(vacancies, function):
+def get_salaries(vacancies, predict_rub_salary):
     salaries = []
     for vacancy in vacancies:
-        if function(vacancy):
-            salaries.append(function(vacancy))
+        salary = predict_rub_salary(vacancy)
+        if salary:
+            salaries.append(salary)
     return salaries
 
 
-def process_vacancies(it_langs, platform_data):
+def process_vacancies(it_langs, vacancies_params):
     it_lang_vacancies = {}
-    payload = platform_data["payload"]
+    collector = vacancies_params["collector"]
+    url = vacancies_params["url"]
+    payload = vacancies_params["payload"]
+    header = vacancies_params["header"]
     for lang in it_langs:
-        match platform_data["search_key"]:
+        match vacancies_params["search_key"]:
             case "keyword":
                 payload["keyword"] = f"{lang}"
             case "text":
                 payload["text"] = f"NAME:{lang}"
-        vacancy_data = platform_data["collector"](
-            platform_data["url"], payload, platform_data["header"]
-        )
-        vacancies_processed = len(vacancy_data[0])
+        salaries, vacancies_found = collector(url, payload, header)
+        vacancies_processed = len(salaries)
         if vacancies_processed:
-            average_salary = int(sum(vacancy_data[0]) / vacancies_processed)
+            average_salary = int(sum(salaries) / vacancies_processed)
         else:
             average_salary = 0
         it_lang_vacancies[lang] = {
-            "vacancies_found": vacancy_data[1],
+            "vacancies_found": vacancies_found,
             "vacancies_processed": vacancies_processed,
             "average_salary": average_salary,
         }
@@ -103,7 +103,7 @@ def process_vacancies(it_langs, platform_data):
 
 
 def print_table(title, it_lang_stat):
-    table_data = [
+    table_content = [
         [
             "Язык программирования",
             "Вакансий найдено",
@@ -119,25 +119,15 @@ def print_table(title, it_lang_stat):
             stat["vacancies_processed"],
             stat["average_salary"],
         ]
-        table_data.append(lang_stat)
+        table_content.append(lang_stat)
 
-    table = AsciiTable(table_data, title)
+    table = AsciiTable(table_content, title)
     print(table.table)
 
 
 def main():
     dotenv.load_dotenv()
     sjob_key = os.environ["SJOB_KEY"]
-    parser = argparse.ArgumentParser(
-                prog = "dev_job_stat",
-                description = """Utility for fetching salary statistics for
-                  JavaScript, Java, Python, Ruby, PHP, C++, C#, Go, Scala,
-                  Swift, TypeScript programming languages from HeadHunter
-                  and SuperJob platforms. Uses vacancies published in last
-                  30 days."""
-        )
-    parser.parse_args()
-
     popular_it_langs = [
         "JavaScript",
         "Java",
@@ -151,34 +141,47 @@ def main():
         "Swift",
         "TypeScript",
     ]
+    hh_prof_category_id = 96
+    sj_prof_category_id = 48
+    hh_moscow_id = 1
+    sj_moscow_id = 4
+    vacancy_publish_period = 30
+    vacancies_per_page = 100
 
     payload_hh = {
-        "professional_role": "96",
-        "area": 1,
-        "period": 30,
-        "per_page": 100,
+        "professional_role": hh_prof_category_id,
+        "area": hh_moscow_id,
+        "period": vacancy_publish_period,
+        "per_page": vacancies_per_page,
     }
-    hh_data = {
+    hh_vacancies_params = {
         "url": "https://api.hh.ru/vacancies",
         "payload": payload_hh,
         "search_key": "text",
         "header": {},
-        "collector": get_hh_vacancy_data,
+        "collector": get_hh_vacancies,
     }
     print_table(
-        "HeadHunter Moscow", process_vacancies(popular_it_langs, hh_data)
+        "HeadHunter Moscow",
+        process_vacancies(popular_it_langs, hh_vacancies_params),
     )
 
-    payload_sj = {"catalogues": 48, "t": 4, "period": 30, "count": 100}
-    sj_data = {
+    payload_sj = {
+        "catalogues": sj_prof_category_id,
+        "t": sj_moscow_id,
+        "period": vacancy_publish_period,
+        "count": vacancies_per_page,
+    }
+    sj_vacancies_params = {
         "url": "https://api.superjob.ru/2.0/vacancies/",
         "payload": payload_sj,
         "search_key": "keyword",
         "header": {"X-Api-App-Id": sjob_key},
-        "collector": get_sj_vacancy_data,
+        "collector": get_sj_vacancies,
     }
     print_table(
-        "SuperJob Moscow", process_vacancies(popular_it_langs, sj_data)
+        "SuperJob Moscow",
+        process_vacancies(popular_it_langs, sj_vacancies_params),
     )
 
 
